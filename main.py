@@ -6,7 +6,7 @@ from time import sleep
 import os
 
 
-PATH_PREFIX = "data_1/"
+PATH_PREFIX = "data/"
 
 
 def main():

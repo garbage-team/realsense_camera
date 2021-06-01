@@ -5,15 +5,17 @@ from scipy.spatial import Delaunay
 from math import pi
 import numpy as np
 
-
 def main():
 
     pipe, align, d_scale = setup_camera_feeds()
-    volume_empty = []#-0.1067519020328733
-    volume_full = 0#-0.03130304659043235
+    volume_empty = []  # -0.1067519020328733
+    volume_full = 0  # -0.03130304659043235
+    # Run 10 measurements on empty to calibrate
     for i in range(10):
+        # TODO Place the volume extracting inside its own function
         rgb, depth, images = capture_images(pipe, align, d_scale)
         xyz = depth_to_xyz(depth)
+        # Remove points outside region of interest and shift coordinate system
         xyz = xyz[np.where(xyz[:, 2] < 1.1)]
         xyz = xyz[np.where(xyz[:, 2] > 0.6)]
         xyz = shift_xyz_to_pallet(xyz, angle=0.23554, z0=0.75)
@@ -24,6 +26,7 @@ def main():
     volume_empty_mae = np.mean(abs(volume_empty - volume_empty_avg))
     print("Avg empty volume: ", volume_empty_avg)
     print("Avg error %: ", round(-volume_empty_mae/volume_empty_avg, 2))
+
     while True:
 
         rgb, depth, images = capture_images(pipe, align, d_scale)
@@ -130,7 +133,7 @@ def depth_to_xyz(depth, fov=(69.4, 42.5)):
     return p
 
 
-def shift_xyz_to_pallet(xyz, angle=-0.1974, z0=0.75):
+def shift_xyz_to_pallet(xyz, angle, z0=0.75):
     """
 
     :param xyz: xyz point cloud
@@ -138,6 +141,7 @@ def shift_xyz_to_pallet(xyz, angle=-0.1974, z0=0.75):
     :param z0: distance to average top level of the pallet from depth map
     :return: shifted and tilted xyz point cloud
     """
+    # TODO Add detection of the angle automatically using the height from two coordinates on the rim
     xyz[:, 2] = z0 - xyz[:, 2]
     t_x = np.asarray([[1., 0., 0.],
                       [0, math.cos(angle), math.sin(angle)],
@@ -172,6 +176,15 @@ def xyz_to_volume(xyz):
     volume = np.sum(volumes)   # [e,] -> [,]
     return volume
 
+
+def volume_from_depth(depth, z_max=1.1, z_min=0.6, z0=0.75):
+    xyz = depth_to_xyz(depth)
+    # Remove points outside region of interest and shift coordinate system
+    xyz = xyz[np.where(xyz[:, 2] < z_max)]
+    xyz = xyz[np.where(xyz[:, 2] > z_min)]
+    xyz = shift_xyz_to_pallet(xyz, angle=0.23554, z0=z0)
+
+    return xyz_to_volume(xyz)
 
 if __name__ == '__main__':
     main()

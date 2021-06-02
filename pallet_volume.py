@@ -4,47 +4,48 @@ import pyrealsense2 as rs
 from scipy.spatial import Delaunay
 from math import pi
 import numpy as np
+from config import cfg
 
 def main():
-
+    # TODO Add a load from config function that sets parameters according to case
+    calibrate = True
     pipe, align, d_scale = setup_camera_feeds()
-    volume_empty = []  # -0.1067519020328733
-    volume_full = 0  # -0.03130304659043235
-    # Run 10 measurements on empty to calibrate
-    for i in range(10):
-        # TODO Place the volume extracting inside its own function
-        rgb, depth, images = capture_images(pipe, align, d_scale)
-        xyz = depth_to_xyz(depth)
-        # Remove points outside region of interest and shift coordinate system
-        xyz = xyz[np.where(xyz[:, 2] < 1.1)]
-        xyz = xyz[np.where(xyz[:, 2] > 0.6)]
-        xyz = shift_xyz_to_pallet(xyz, angle=0.23554, z0=0.75)
+    articles = 7
 
-        volume = xyz_to_volume(xyz)
-        volume_empty.append(volume)
-    volume_empty_avg = np.mean(volume_empty)
-    volume_empty_mae = np.mean(abs(volume_empty - volume_empty_avg))
-    print("Avg empty volume: ", volume_empty_avg)
-    print("Avg error %: ", round(-volume_empty_mae/volume_empty_avg, 2))
+    if calibrate:
+        print('Starting calibration, make sure the pallet is full with articles.')
+        volume_empty = cfg['pallet_empty']
+        volume_full = []
+        # Get avg of 5 measurements
+        for i in range(5):
+            rgb, depth = capture_images(pipe, align, d_scale)
+            volume = volume_from_depth(depth)
+            volume_full.append(volume)
+        volume_full_var = np.var(volume_full)
+        error = np.mean(volume_full - np.mean(volume_full))
+        volume_full = np.mean(volume_full)
+        print('Calibration complete!')
+        print("Full volume: ", volume_full)
+        print('Variance: ', volume_full_var)
+        print('error: ', error)
+    else:
+        print('Running default values.')
+        volume_empty = cfg['pallet_empty']
+        volume_full = cfg['pallet_full']
+    volumes = [volume_empty, volume_full]
 
     while True:
 
-        rgb, depth, images = capture_images(pipe, align, d_scale)
-        xyz = depth_to_xyz(depth)
-        xyz = xyz[np.where(xyz[:, 2] < 1.1)]
-        xyz = xyz[np.where(xyz[:, 2] > 0.6)]
-        xyz = shift_xyz_to_pallet(xyz, angle=0.23554, z0=0.75)
-
-        volume = xyz_to_volume(xyz)
-        fill_rate = 1 - (volume-volume_full)/(volume_empty_avg-volume_full)
-        fill_rate_prc = 100 * fill_rate
-        print("Fill rate percentage: ", str(round(fill_rate_prc, 2)), "%")
-
-        cv2.imshow('Pallet', rgb)
-        cv2.waitKey(0)
+        rgb, depth = capture_images(pipe, align, d_scale)
+        volume = volume_from_depth(depth)
+        show_result(rgb, volume, volumes, articles)
 
 
 def setup_camera_feeds():
+    """
+    Starts the RealSense camera streams and aligns the rgb and depth image
+    :return: the camera pipeline, aligned frames, and the scale of the depth image
+    """
     print("Setting up camera pipeline..")
     pipe = rs.pipeline()
     config = rs.config()
@@ -73,7 +74,13 @@ def setup_camera_feeds():
 
 
 def capture_images(pipe, align, depth_scale):
-    print('Capturing images..')
+    """
+    Captures a RGB image and a depth map from the camera
+    :param pipe: Camera pipeline
+    :param align: Aligned frames
+    :param depth_scale: Scale of the depth map
+    :return: rgb image, depth map image
+    """
     # Get coherent set of frames [depth and color]
     frames = pipe.wait_for_frames()
     aligned_frames = align.process(frames)
@@ -85,22 +92,8 @@ def capture_images(pipe, align, depth_scale):
     depth_image = np.asanyarray(depth_frame.get_data())
     color_image = np.asanyarray(color_frame.get_data())
 
-    # Apply colormap on depth image (image must be converted to 8-bit per pixel first)
-    depth_colormap = cv2.applyColorMap(cv2.convertScaleAbs(depth_image, alpha=0.03), cv2.COLORMAP_JET)
-
-    depth_colormap_dim = depth_colormap.shape
-    color_colormap_dim = color_image.shape
-
-    # If depth and color resolutions are different, resize color image to match depth image for display
-    if depth_colormap_dim != color_colormap_dim:
-        resized_color_image = cv2.resize(color_image, dsize=(depth_colormap_dim[1], depth_colormap_dim[0]),
-                                         interpolation=cv2.INTER_AREA)
-        images = np.hstack((resized_color_image, depth_colormap))
-    else:
-        images = np.hstack((color_image, depth_colormap))
-
-    print("Images captured.")
-    return color_image, depth_image * depth_scale, images
+    print("Captured images.")
+    return color_image, depth_image * depth_scale
 
 
 def depth_to_xyz(depth, fov=(69.4, 42.5)):
@@ -183,8 +176,31 @@ def volume_from_depth(depth, z_max=1.1, z_min=0.6, z0=0.75):
     xyz = xyz[np.where(xyz[:, 2] < z_max)]
     xyz = xyz[np.where(xyz[:, 2] > z_min)]
     xyz = shift_xyz_to_pallet(xyz, angle=0.23554, z0=z0)
+    volume = xyz_to_volume(xyz)
+    return round(volume, 4)
 
-    return xyz_to_volume(xyz)
+
+def show_result(rgb, volume, volumes, articles):
+    font = cv2.FONT_HERSHEY_SIMPLEX
+    fill_rate = 1 - (volume - volumes[1]) / (volumes[0] - volumes[1])
+    fill_rate_prc = 100 * fill_rate
+    fill_articles = round(fill_rate * articles)
+    print("Fill rate percentage: ", str(round(fill_rate_prc, 2)), "%")
+    text = str(fill_articles) + "/" + str(articles)
+
+    if fill_rate < 0.3:
+        # Red text if nearly empty
+        text_color = (0, 0, 255)
+    elif fill_rate < 0.6:
+        # Yellow text if medium full
+        text_color = (0, 255, 255)
+    else:
+        # Green text if mostly full
+        text_color = (0, 255, 0)
+    rgb = cv2.putText(rgb, text, (75, 75), font, 3, text_color, 2, cv2.LINE_AA)
+    cv2.imshow('Pallet', rgb)
+    cv2.waitKey(0)
+
 
 if __name__ == '__main__':
     main()

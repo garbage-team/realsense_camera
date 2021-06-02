@@ -19,6 +19,7 @@ def main():
 
 
 def run_measurement(volume_full, volume_empty):
+
     rgb, depth = capture_images(pipe, align, d_scale)
     volume = volume_from_depth(depth)
     fill_rate = 1 - (volume - volume_full) / (volume_empty - volume_full)
@@ -195,6 +196,7 @@ class PalletGUI:
         self.fill_articles = round(self.fill_rate * self.articles)
         self.bg_color = 'green'
         self.msg_box = None
+        self.msg_box_text = "This will set the current volume as the maximum level.\nContinue?"
 
         # Setup GUI window, buttons, and labels
         self.window = tk.Tk()
@@ -255,7 +257,7 @@ class PalletGUI:
         self.update_fill_rate()
 
     def set_max_volume(self):
-        self.msg_box = messagebox.askquestion("Setting new maximum level", "This will set the current volume as the maximum level.\nContinue?")
+        self.msg_box = messagebox.askquestion("Setting new maximum level", msg_box_text)
         if self.msg_box == 'yes':
             self.reset_btn['text'] = 'Set new maximum level'
             self.volume_full = calibrate()

@@ -4,42 +4,25 @@ import pyrealsense2 as rs
 from scipy.spatial import Delaunay
 from math import pi
 import numpy as np
+import tkinter as tk
+from tkinter import messagebox
+from PIL import Image, ImageTk
 from config import cfg
 
 
 def main():
-    # TODO Add a load from config function that sets parameters according to case
-    calibrate = True
-    pipe, align, d_scale = setup_camera_feeds()
-    articles = 7
+    # TODO Maybe move all functions and classes to another file
+    volume_empty = cfg['pallet_empty']
+    volume_full = cfg['pallet_full']
+    gui = PalletGUI(volume_full, volume_empty)
+    gui.window.mainloop()
 
-    if calibrate:
-        print('Starting calibration, make sure the pallet is full with articles.')
-        volume_empty = cfg['pallet_empty']
-        volume_full = []
-        # Get avg of 5 measurements
-        for i in range(5):
-            rgb, depth = capture_images(pipe, align, d_scale)
-            volume = volume_from_depth(depth)
-            volume_full.append(volume)
-        volume_full_var = np.var(volume_full)
-        error = np.mean(volume_full - np.mean(volume_full))
-        volume_full = np.mean(volume_full)
-        print('Calibration complete!')
-        print("Full volume: ", volume_full)
-        print('Variance: ', volume_full_var)
-        print('error: ', error)
-    else:
-        print('Running default values.')
-        volume_empty = cfg['pallet_empty']
-        volume_full = cfg['pallet_full']
-    volumes = [volume_empty, volume_full]
 
-    while True:
-
-        rgb, depth = capture_images(pipe, align, d_scale)
-        volume = volume_from_depth(depth)
-        show_result(rgb, volume, volumes, articles)
+def run_measurement(volume_full, volume_empty):
+    rgb, depth = capture_images(pipe, align, d_scale)
+    volume = volume_from_depth(depth)
+    fill_rate = 1 - (volume - volume_full) / (volume_empty - volume_full)
+    return rgb, fill_rate
 
 
 def setup_camera_feeds():
@@ -181,27 +164,109 @@ def volume_from_depth(depth, z_max=1.1, z_min=0.6, z0=0.75):
     return round(volume, 4)
 
 
-def show_result(rgb, volume, volumes, articles):
-    font = cv2.FONT_HERSHEY_SIMPLEX
-    fill_rate = 1 - (volume - volumes[1]) / (volumes[0] - volumes[1])
-    fill_rate_prc = 100 * fill_rate
-    fill_articles = round(fill_rate * articles)
-    print("Fill rate percentage: ", str(round(fill_rate_prc, 2)), "%")
-    text = str(fill_articles) + "/" + str(articles)
+def calibrate():
+    print('Starting calibration, make sure the pallet is full with articles.')
+    volume_full = []
+    # Get avg of 5 measurements
+    for i in range(5):
+        rgb, depth = capture_images(pipe, align, d_scale)
+        volume = volume_from_depth(depth)
+        volume_full.append(volume)
+    volume_full_var = np.var(volume_full)
+    error = np.mean(volume_full - np.mean(volume_full))
+    volume_full = np.mean(volume_full)
+    print('Calibration complete!')
+    print("Full volume: ", volume_full)
+    print('Variance: ', volume_full_var)
+    print('error: ', error)
+    return volume_full
 
-    if fill_rate < 0.3:
-        # Red text if nearly empty
-        text_color = (0, 0, 255)
-    elif fill_rate < 0.6:
-        # Yellow text if medium full
-        text_color = (0, 255, 255)
-    else:
-        # Green text if mostly full
-        text_color = (0, 255, 0)
-    rgb = cv2.putText(rgb, text, (75, 75), font, 3, text_color, 2, cv2.LINE_AA)
-    cv2.imshow('Pallet', rgb)
-    cv2.waitKey(0)
+
+class PalletGUI:
+
+    def __init__(self, volume_full, volume_empty):
+        # Setup variables
+        self.rgb = None
+        self.current_image = None
+        self.volume_full = volume_full
+        self.volume_empty = volume_empty
+        self.articles = 0
+        self.fill_rate = 0
+        self.fill_articles = round(self.fill_rate * self.articles)
+        self.bg_color = 'green'
+        self.msg_box = None
+
+        # Setup GUI window, buttons, and labels
+        self.window = tk.Tk()
+        self.window.wm_title("Pallet measuring")
+        self.img_frame = tk.Frame(master=self.window)
+        self.btn_frame = tk.Frame(master=self.window, relief=tk.RAISED)
+        self.btn_frame.rowconfigure([0, 1, 2], minsize=50)
+        self.btn_frame.columnconfigure([0, 1, 2], minsize=70)
+
+        # Image panel
+        self.panel = tk.Label(master=self.img_frame)
+        self.panel.pack(padx=10, pady=10)
+        # Article text
+        self.article_lbl = tk.Label(self.btn_frame, text="Number of articles / Total articles")
+        self.article_lbl.grid(row=0, column=0, columnspan=3)
+        # Article fill rate text
+        self.fill_article_lbl = tk.Label(self.btn_frame, text=self.articles, relief='solid')
+        self.fill_article_lbl.grid(row=1, column=1, sticky="nsew", padx=10, pady=10)
+        # Article add/remove buttons
+        self.add_btn = tk.Button(self.btn_frame, text="+ total", command=self.add_article)
+        self.add_btn.grid(row=1, column=2, sticky="nsew", padx=10, pady=10)
+        self.rem_btn = tk.Button(self.btn_frame, text="- total", command=self.remove_article)
+        self.rem_btn.grid(row=1, column=0, sticky="nsew", padx=10, pady=10)
+
+        # Reset volume button
+        self.reset_btn = tk.Button(self.btn_frame, text="Start measuring", command=self.set_max_volume)
+        self.reset_btn.grid(row=2, column=0, columnspan=3, sticky="nsew", padx=10, pady=10)
+
+        self.img_frame.pack()
+        self.btn_frame.pack()
+        self.update_display()
+
+    def update_display(self):
+        self.rgb, self.fill_rate = run_measurement(self.volume_full, self.volume_empty)
+        self.update_fill_rate()
+        self.current_image = Image.fromarray(self.rgb)
+        self.img_tk = ImageTk.PhotoImage(image=self.current_image)  # convert image for tkinter
+        self.panel.img_tk = self.img_tk  # anchor imgtk so it does not be deleted by garbage-collector
+        self.panel.config(image=self.img_tk)  # show the image
+
+    def update_fill_rate(self):
+        if self.fill_rate < 0.25:
+            self.bg_color = 'red'
+        elif self.fill_rate < 0.6:
+            self.bg_color = 'yellow'
+        else:
+            self.bg_color = 'green'
+        self.fill_articles = round(self.fill_rate * self.articles)
+        self.fill_article_lbl['text'] = str(self.fill_articles) + '/' + str(self.articles)
+        self.fill_article_lbl['bg'] = self.bg_color
+
+    def add_article(self):
+        self.articles += 1
+        self.update_fill_rate()
+
+    def remove_article(self):
+        self.articles = self.articles - 1 if self.articles > 0 else 0
+        self.update_fill_rate()
+
+    def set_max_volume(self):
+        self.msg_box = messagebox.askquestion("Setting new maximum level", "This will set the current volume as the maximum level.\nContinue?")
+        if self.msg_box == 'yes':
+            self.reset_btn['text'] = 'Set new maximum level'
+            self.volume_full = calibrate()
+            self.run()
+
+    def run(self):
+        print('running')
+        self.update_display()
+        self.window.after(0, run)
 
 
 if __name__ == '__main__':
+    pipe, align, d_scale = setup_camera_feeds()
     main()

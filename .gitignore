@@ -116,3 +116,5 @@ dmypy.json
 # Project specific
 data*/
 validation_intel.zip
+.idea/
+

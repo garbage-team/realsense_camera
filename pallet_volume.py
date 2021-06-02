@@ -6,6 +6,7 @@ from math import pi
 import numpy as np
 from config import cfg
 
+
 def main():
     # TODO Add a load from config function that sets parameters according to case
     calibrate = True
@@ -138,7 +139,7 @@ def shift_xyz_to_pallet(xyz, angle, z0=0.75):
     xyz[:, 2] = z0 - xyz[:, 2]
     t_x = np.asarray([[1., 0., 0.],
                       [0, math.cos(angle), math.sin(angle)],
-                   [0, -math.sin(angle), math.cos(angle)]])
+                      [0, -math.sin(angle), math.cos(angle)]])
     xyz_shifted = np.dot(xyz, t_x)
 
     return xyz_shifted

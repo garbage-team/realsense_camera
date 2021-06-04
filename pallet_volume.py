@@ -26,61 +26,6 @@ def run_measurement(volume_full, volume_empty):
     return rgb, fill_rate
 
 
-def setup_camera_feeds():
-    """
-    Starts the RealSense camera streams and aligns the rgb and depth image
-    :return: the camera pipeline, aligned frames, and the scale of the depth image
-    """
-    print("Setting up camera pipeline..")
-    pipe = rs.pipeline()
-    config = rs.config()
-
-    # Finding config data and creating the output streams for the camera
-    pipeline_wrapper = rs.pipeline_wrapper(pipe)
-    pipeline_profile = config.resolve(pipeline_wrapper)
-    device = pipeline_profile.get_device()
-    config.enable_stream(rs.stream.depth, 640, 480, rs.format.z16, 30)
-    config.enable_stream(rs.stream.color, 640, 480, rs.format.bgr8, 30)
-
-    # Start the pipeline to start streaming data
-    profile = pipe.start(config)
-
-    # Getting the depth sensor's depth scale (see rs-align example for explanation)
-    depth_sensor = profile.get_device().first_depth_sensor()
-    depth_scale = depth_sensor.get_depth_scale()
-
-    # Create an align object
-    # rs.align allows us to perform alignment of depth frames to others frames
-    # The "align_to" is the stream type to which we plan to align depth frames.
-    align_to = rs.stream.color
-    align = rs.align(align_to)
-    print("Camera setup complete.")
-    return pipe, align, depth_scale
-
-
-def capture_images(pipe, align, depth_scale):
-    """
-    Captures a RGB image and a depth map from the camera
-    :param pipe: Camera pipeline
-    :param align: Aligned frames
-    :param depth_scale: Scale of the depth map
-    :return: rgb image, depth map image
-    """
-    # Get coherent set of frames [depth and color]
-    frames = pipe.wait_for_frames()
-    aligned_frames = align.process(frames)
-    depth_frame = aligned_frames.get_depth_frame()
-    color_frame = aligned_frames.get_color_frame()
-    if not color_frame or not depth_frame:
-        print("Could not capture frame(s). Retrying..")
-        # capture_images(pipe, align)
-    depth_image = np.asanyarray(depth_frame.get_data())
-    color_image = np.asanyarray(color_frame.get_data())
-
-    print("Captured images.")
-    return color_image, depth_image * depth_scale
-
-
 def calibrate():
     print('Starting calibration, make sure the pallet is full with articles.')
     volume_full = []

@@ -1,11 +1,13 @@
 import cv2
-import pyrealsense2 as rs
 import numpy as np
 import tkinter as tk
 from tkinter import messagebox
 from PIL import Image, ImageTk
 from config import cfg
 from PointCloud import PointCloud
+from RSCamera import RSCamera
+
+
 
 
 def main():
@@ -14,36 +16,6 @@ def main():
     volume_full = cfg['pallet_full']
     gui = PalletGUI(volume_full, volume_empty)
     gui.window.mainloop()
-
-
-def run_measurement(volume_full, volume_empty):
-
-    rgb, depth = capture_images(pipe, align, d_scale)
-    xyz = depth_to_xyz(depth)
-    xyz = select_roi(xyz)
-    volume = xyz_to_volume(xyz)
-    fill_rate = 1 - (volume - volume_full) / (volume_empty - volume_full)
-    return rgb, fill_rate
-
-
-def calibrate():
-    print('Starting calibration, make sure the pallet is full with articles.')
-    volume_full = []
-    # Get avg of 5 measurements
-    for i in range(5):
-        rgb, depth = capture_images(pipe, align, d_scale)
-        pc = PointCloud(depth)
-        pc.select_roi()
-        volume = pc.to_volume()
-        volume_full.append(volume)
-    volume_full_var = np.var(volume_full)
-    error = np.mean(volume_full - np.mean(volume_full))
-    volume_full = np.mean(volume_full)
-    print('Calibration complete!')
-    print("Full volume: ", volume_full)
-    print('Variance: ', volume_full_var)
-    print('error: ', error)
-    return volume_full
 
 
 class PalletGUI:
@@ -139,5 +111,4 @@ class PalletGUI:
 
 
 if __name__ == '__main__':
-    pipe, align, d_scale = setup_camera_feeds()
     main()

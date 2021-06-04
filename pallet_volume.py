@@ -21,7 +21,9 @@ def main():
 def run_measurement(volume_full, volume_empty):
 
     rgb, depth = capture_images(pipe, align, d_scale)
-    volume = volume_from_depth(depth)
+    xyz = depth_to_xyz(depth)
+    xyz = select_roi(xyz)
+    volume = xyz_to_volume(xyz)
     fill_rate = 1 - (volume - volume_full) / (volume_empty - volume_full)
     return rgb, fill_rate
 
@@ -156,8 +158,9 @@ def crop_xyz(xyz, borders=np.asarray([1, -1]), axis=0):
     :param axis: which axis of points to be considered
     :return: a subset of points in xyz that fulfills the condition
     """
-    return xyz[np.logical_and(np.where(xyz[:, axis] < np.max(borders)),
-                              np.where(xyz[:, axis] > np.min(borders)))]
+    xyz = xyz[np.where(xyz[:, axis] < np.max(borders))]
+    xyz = xyz[np.where(xyz[:, axis] > np.min(borders))]
+    return xyz
 
 
 def xyz_to_volume(xyz):
@@ -247,23 +250,28 @@ class PalletGUI:
         self.window.wm_title("Pallet measuring")
         self.img_frame = tk.Frame(master=self.window)
         self.btn_frame = tk.Frame(master=self.window, relief=tk.RAISED)
-        self.btn_frame.rowconfigure([0, 1, 2], minsize=50)
-        self.btn_frame.columnconfigure([0, 1, 2], minsize=70)
+        self.btn_frame.rowconfigure([0, 1], minsize=50)
+        self.btn_frame.columnconfigure([0, 1, 2, 3], minsize=70)
 
         # Image panel
         self.panel = tk.Label(master=self.img_frame)
         self.panel.pack(padx=10, pady=10)
         # Article text
-        self.article_lbl = tk.Label(self.btn_frame, text="Number of articles / Total articles")
-        self.article_lbl.grid(row=0, column=0, columnspan=3)
+        self.article_lbl = tk.Label(self.btn_frame, text="Maximum number of artricles: " + str(self.articles))
+        self.article_lbl.grid(row=0, column=0, columnspan=2)
+        # Article add/remove buttons
+        self.add_btn = tk.Button(self.btn_frame, text="+", command=self.add_article)
+        self.add_btn.grid(row=0, column=2, sticky="nsew", padx=10, pady=10)
+        self.rem_btn = tk.Button(self.btn_frame, text="-", command=self.remove_article)
+        self.rem_btn.grid(row=0, column=3, sticky="nsew", padx=10, pady=10)
         # Article fill rate text
         self.fill_article_lbl = tk.Label(self.btn_frame, text=self.articles, relief='solid')
-        self.fill_article_lbl.grid(row=1, column=1, sticky="nsew", padx=10, pady=10)
-        # Article add/remove buttons
-        self.add_btn = tk.Button(self.btn_frame, text="+ total", command=self.add_article)
-        self.add_btn.grid(row=1, column=2, sticky="nsew", padx=10, pady=10)
-        self.rem_btn = tk.Button(self.btn_frame, text="- total", command=self.remove_article)
-        self.rem_btn.grid(row=1, column=0, sticky="nsew", padx=10, pady=10)
+        self.fill_article_lbl.config(font=("Courier", 44))
+        self.fill_article_lbl.grid(row=1, column=0, columnspan=2, sticky="nsew", padx=10, pady=10)
+
+        # Reset volume button
+        self.reset_btn = tk.Button(self.btn_frame, text="Start measuring", command=self.set_max_volume)
+        self.reset_btn.grid(row=1, column=2, columnspan=2, sticky="nsew", padx=10, pady=10)
 
         # Reset volume button
         self.reset_btn = tk.Button(self.btn_frame, text="Start measuring", command=self.set_max_volume)
@@ -308,19 +316,12 @@ class PalletGUI:
             self.run()
 
     def run(self):
+        # TODO Prb not needed
         print('running')
         self.update_display()
-        self.window.after(0, self.run)
+        self.window.after(1000, self.run)
 
 
 if __name__ == '__main__':
-    # pipe, align, d_scale = setup_camera_feeds()
-    # main()
-    points = np.asarray([[1, 1, 1],
-                         [2, 2, 2],
-                         [3, 3, 3],
-                         [4, 4, 4],
-                         [5, 5, 5]])
-    print(points)
-    points = rotate_xyz(points, np.asarray([np.pi, np.pi, np.pi]))
-    print(points)
+    pipe, align, d_scale = setup_camera_feeds()
+    main()

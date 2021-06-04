@@ -73,7 +73,7 @@ def capture_images(pipe, align, depth_scale):
     color_frame = aligned_frames.get_color_frame()
     if not color_frame or not depth_frame:
         print("Could not capture frame(s). Retrying..")
-        #capture_images(pipe, align)
+        # capture_images(pipe, align)
     depth_image = np.asanyarray(depth_frame.get_data())
     color_image = np.asanyarray(color_frame.get_data())
 
@@ -107,26 +107,57 @@ def depth_to_xyz(depth, fov=(69.4, 42.5)):
     z = np.expand_dims(z, -1)  # [h, w, 1]
     p = np.concatenate((x, y, z), axis=-1)   # [h, w, 3]
     p = np.reshape(p, (x_size * y_size, 3))  # [p, 3]
-
     return p
 
 
-def shift_xyz_to_pallet(xyz, angle, z0=0.75):
+def transform_xyz(xyz, rotation_matrix=np.eye(3), shift_matrix=np.asarray([0, 0, 0])):
     """
+    Shift and transform pointcloud according to equation:
+    points = xyz @ rotation_matrix + shift_matrix
 
     :param xyz: xyz point cloud
-    :param angle: angle to tilt the coordinate system with
-    :param z0: distance to average top level of the pallet from depth map
+    :param rotation_matrix:
+    :param shift_matrix:
     :return: shifted and tilted xyz point cloud
     """
     # TODO Add detection of the angle automatically using the height from two coordinates on the rim
-    xyz[:, 2] = z0 - xyz[:, 2]
-    t_x = np.asarray([[1., 0., 0.],
-                      [0, math.cos(angle), math.sin(angle)],
-                      [0, -math.sin(angle), math.cos(angle)]])
-    xyz_shifted = np.dot(xyz, t_x)
+    return (xyz @ rotation_matrix) + shift_matrix
 
-    return xyz_shifted
+
+def rotate_xyz(xyz, angles=np.asarray([0, 0, 0])):
+    """
+    Rotates all points in xyz around each axis in order according to angles
+
+    :param xyz: points to rotate
+    :param angles: angles in radians of each axis' rotation
+    :return: rotated xyz points
+    """
+    x_rotation = np.asarray([[1, 0, 0],
+                             [0, np.cos(angles[0]), -np.sin(angles[0])],
+                             [0, np.sin(angles[0]),  np.cos(angles[0])]])
+    y_rotation = np.asarray([[np.cos(angles[1]), 0, -np.sin(angles[1])],
+                             [0, 1, 0],
+                             [np.sin(angles[1]), 0,  np.cos(angles[1])]])
+    z_rotation = np.asarray([[np.cos(angles[2]), -np.sin(angles[2]), 0],
+                             [np.sin(angles[2]),  np.cos(angles[2]), 0],
+                             [0, 0, 1]])
+    rotation = x_rotation @ y_rotation @ z_rotation
+    xyz = transform_xyz(xyz, rotation_matrix=rotation)
+    return xyz
+
+
+def crop_xyz(xyz, borders=np.asarray([1, -1]), axis=0):
+    """
+    Returns points in xyz where the values along the axis is within the values given
+    in borders
+
+    :param xyz: points in shape [p, 3]
+    :param borders: two values within which all values should lie
+    :param axis: which axis of points to be considered
+    :return: a subset of points in xyz that fulfills the condition
+    """
+    return xyz[np.logical_and(np.where(xyz[:, axis] < np.max(borders)),
+                              np.where(xyz[:, axis] > np.min(borders)))]
 
 
 def xyz_to_volume(xyz):
@@ -155,14 +186,25 @@ def xyz_to_volume(xyz):
     return volume
 
 
-def volume_from_depth(depth, z_max=1.1, z_min=0.6, z0=0.75):
-    xyz = depth_to_xyz(depth)
-    # Remove points outside region of interest and shift coordinate system
-    xyz = xyz[np.where(xyz[:, 2] < z_max)]
-    xyz = xyz[np.where(xyz[:, 2] > z_min)]
-    xyz = shift_xyz_to_pallet(xyz, angle=0.23554, z0=z0)
-    volume = xyz_to_volume(xyz)
-    return round(volume, 4)
+def select_roi(xyz,
+               shift=np.asarray([0, 0, -0.75]),
+               rotation=np.asarray([0.23554, 0, 0]),
+               borders=np.asarray([[np.inf, -np.inf], [np.inf, -np.inf], [1.1, 0.6]])):
+    """
+    Transforms and crops point cloud according to
+    region of interest set
+
+    :param xyz: the inputs point cloud
+    :param shift: the linear movement after rotation
+    :param rotation: the rotation in each axis in radians
+    :param borders: the borders for each axis after shift and rotation
+    :return: points within region of interest
+    """
+    xyz = rotate_xyz(xyz, angles=np.asarray(rotation))
+    xyz = transform_xyz(xyz, shift_matrix=np.asarray(shift))
+    for i in range(len(borders)):
+        xyz = crop_xyz(xyz, borders[i], axis=i)
+    return xyz
 
 
 def calibrate():
@@ -171,7 +213,9 @@ def calibrate():
     # Get avg of 5 measurements
     for i in range(5):
         rgb, depth = capture_images(pipe, align, d_scale)
-        volume = volume_from_depth(depth)
+        xyz = depth_to_xyz(depth)
+        xyz = select_roi(xyz)
+        volume = xyz_to_volume(xyz)
         volume_full.append(volume)
     volume_full_var = np.var(volume_full)
     error = np.mean(volume_full - np.mean(volume_full))
@@ -257,7 +301,7 @@ class PalletGUI:
         self.update_fill_rate()
 
     def set_max_volume(self):
-        self.msg_box = messagebox.askquestion("Setting new maximum level", msg_box_text)
+        self.msg_box = messagebox.askquestion("Setting new maximum level", self.msg_box_text)
         if self.msg_box == 'yes':
             self.reset_btn['text'] = 'Set new maximum level'
             self.volume_full = calibrate()
@@ -266,9 +310,17 @@ class PalletGUI:
     def run(self):
         print('running')
         self.update_display()
-        self.window.after(0, run)
+        self.window.after(0, self.run)
 
 
 if __name__ == '__main__':
-    pipe, align, d_scale = setup_camera_feeds()
-    main()
+    # pipe, align, d_scale = setup_camera_feeds()
+    # main()
+    points = np.asarray([[1, 1, 1],
+                         [2, 2, 2],
+                         [3, 3, 3],
+                         [4, 4, 4],
+                         [5, 5, 5]])
+    print(points)
+    points = rotate_xyz(points, np.asarray([np.pi, np.pi, np.pi]))
+    print(points)

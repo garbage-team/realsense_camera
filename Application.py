@@ -1,5 +1,5 @@
 from VolumeSensor import VolumeSensor
-from pallet_volume import PalletGUI
+from PalletGUI import PalletGUI
 from config import read_config, save_config
 import numpy as np
 from PointCloudPlotter import plot_point_cloud

@@ -1,3 +1,13 @@
+"""
+For reading config files within the repository
+
+Read the config file with read_config() and save it using
+save_config()
+
+In the config dictionary, the ["config_file_path"] value
+needs to exist when saving, specifying where to save the
+config file. 
+"""
 
 
 def read_config(path="config.csv"):

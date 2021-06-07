@@ -6,7 +6,7 @@ save_config()
 
 In the config dictionary, the ["config_file_path"] value
 needs to exist when saving, specifying where to save the
-config file. 
+config file.
 """
 
 

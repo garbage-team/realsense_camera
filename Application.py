@@ -46,6 +46,8 @@ class Application:
         :return: None
         """
         self.volume_sensor.max_articles += 1
+        self.cfg["max_num_articles"] = self.volume_sensor.max_articles
+        save_config(self.cfg)
 
     def rem_btn_callback(self):
         """
@@ -55,6 +57,8 @@ class Application:
         :return: None
         """
         self.volume_sensor.max_articles -= 1
+        self.cfg["max_num_articles"] = self.volume_sensor.max_articles
+        save_config(self.cfg)
 
     def measure_btn_callback(self):
         """

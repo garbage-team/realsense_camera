@@ -111,7 +111,7 @@ class Application:
 
         :return: Does not return
         """
-        self.volume_sensor.measure_fill_rate()
+        self.measure_btn_callback()
         while True:
             self.update_gui()
             if time() - self.last_measurement > self.update_period:

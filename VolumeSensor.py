@@ -4,14 +4,15 @@ from PointCloud import PointCloud
 
 
 class VolumeSensor:
-    def __init__(self, shift, rotation, borders):
-        self.volume_empty = 0
-        self.volume_full = 1
+    def __init__(self, shift, rotation, borders, cfg: dict):
+        self.volume_empty = float(cfg["volume_empty"])
+        self.volume_full = float(cfg["volume_full"])
         self.depth_camera = RSCamera()
         self.rgb = None
         self.depth = None
         self.point_cloud = None
         self.fill_rate = None
+        self.max_articles = int(cfg["max_num_articles"])
         self.shift = shift
         self.rotation = rotation
         self.borders = borders

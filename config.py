@@ -1,8 +1,17 @@
-# Config file for parameter values throughout the program
-cfg = dict()
 
-# 100% articles volume measurements
-cfg['pallet_empty'] = -0.10452
-cfg['pallet_full'] = 0
-cfg['wheels_4_full'] = -0.03130304659043235
-cfg['joints_empty'] = -0.08498552483051328
+
+def read_config(path="config.csv"):
+    cfg = dict()
+    with open(path, "r") as file:
+        for line in file.readlines():
+            line = line.strip()
+            line = line.split(",")
+            cfg[line[0]] = line[1]
+    return cfg
+
+
+def save_config(cfg_dict):
+    with open(cfg_dict["config_file_path"], "w") as file:
+        for key in cfg_dict.keys():
+            line = str(key) + "," + str(cfg_dict[key]) + "\n"
+            file.write(line)

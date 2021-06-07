@@ -23,7 +23,7 @@ class PointCloud:
         y = np.tile(np.expand_dims(y, axis=-1), (1, x_size))        # [h, w]
         y = np.tan(fov[1] * pi / 360) / (y_size / 2) * np.multiply(y, depth)
 
-        z = depth
+        z = -depth
 
         x = np.expand_dims(x, -1)  # [h, w, 1]
         y = np.expand_dims(y, -1)  # [h, w, 1]
@@ -119,3 +119,11 @@ class PointCloud:
         for i in range(len(borders)):
             self.crop(borders[i], axis=i)
         return self
+
+    def filter(self):
+        num_points = self.xyz.shape[0]
+        selected_points = round(num_points/50)
+        indices = np.random.choice(num_points,
+                                   (selected_points,),
+                                   replace=False)
+        return self.xyz[indices]

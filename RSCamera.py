@@ -1,5 +1,6 @@
 import pyrealsense2 as rs
 import numpy as np
+import cv2
 
 
 class RSCamera:
@@ -42,6 +43,7 @@ class RSCamera:
             print("Could not capture frame(s)...")
         depth_image = np.asanyarray(depth_frame.get_data())
         color_image = np.asanyarray(color_frame.get_data())
+        color_image = cv2.cvtColor(color_image, cv2.COLOR_BGR2RGB)
         return color_image, depth_image * self.depth_scale
 
     def close(self):

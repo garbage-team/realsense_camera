@@ -1,0 +1,5 @@
+config_file_path,config.csv
+volume_full,-0.0948744404463343
+volume_empty,-0.09883082458805918
+max_num_articles,5
+update_period,60

@@ -26,7 +26,7 @@ For running on Raspberry Pi 3/4, installation of RealSense SDK can be done using
 
 1. Ensure the RPi is connected to the Intel RealSense camera with a USB 3.0 cable in the USB 3.0 port, and that the power adapter is plugged in and that the RPi is running. 
 
-2. On the host computer (that will be connected to the screen during the live demo), connect to the “scania-smartlab” network and run “VNC viewer”. Connect to “139.122.242.72” using the login credentials.
+2. On the host computer (that will be connected to the screen during the live demo), connect to the “scania-smartlab” network and run “VNC viewer”. Connect to the IP using the login credentials given in the Teams document.
 
 3. When connected to the RPi, start the terminal and navigate to the /realsense_camera folder (“cd /realsense_camera”). Then run the application using “python3 Application.py” 
 

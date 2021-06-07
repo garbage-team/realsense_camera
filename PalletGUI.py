@@ -43,7 +43,7 @@ class PalletGUI:
         self.calibrate_btn = tk.Button(self.btn_frame, text="Calibrate Full", command=calibrate_btn_callback)
         self.calibrate_btn.grid(row=1, column=4, columnspan=2, sticky="nsew", padx=10, pady=10)
 
-        self.pc_check_var = tk.BooleanVar
+        self.pc_check_var = tk.BooleanVar()
         self.pointcloud_check = tk.Checkbutton(self.btn_frame,
                                                variable=self.pc_check_var,
                                                text="Display Point Cloud",

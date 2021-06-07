@@ -14,4 +14,6 @@ def plot_point_cloud(point_cloud: PointCloud, figure=None):
                  c=pc[:, 2], cmap='hsv')
     ax.set_title("3D plot")
     plt.show(block=False)
+    plt.draw()
+    plt.pause(0.001)
     return figure

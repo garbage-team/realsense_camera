@@ -35,6 +35,12 @@ class PointCloud:
         p = np.reshape(p, (x_size * y_size, 3))  # [p, 3]
         return PointCloud(p)
 
+    def __getitem__(self, item):
+        return self.xyz[item]
+
+    def __setitem__(self, key, value):
+        self.xyz[key] = value
+
     def transform(self, rotation_matrix=np.eye(3), shift_matrix=np.asarray([0, 0, 0])):
         """
         Shift and transform point cloud according to equation:
@@ -87,7 +93,7 @@ class PointCloud:
         Uses Delaunay triangulation for surface reconstruction
 
         Negative z-coordinates result in negative volumes
-        
+
         :return: The total volume of the point cloud in xyz-space (float)
         """
         # Extract the triangles in the xy-plane

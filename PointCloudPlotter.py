@@ -29,7 +29,7 @@ def get_pc_image(pc: PointCloud):
                  pc[:, 2],
                  c=pc[:, 2], cmap='hsv')
     ax.set_title("3D plot")
-    ax.view_init(0, 75)
+    ax.view_init(55, 45)
     plt.savefig("plot.png")
     rgb = cv2.cvtColor(cv2.imread("plot.png"), cv2.COLOR_BGR2RGB)
     return rgb

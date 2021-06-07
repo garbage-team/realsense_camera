@@ -1,6 +1,7 @@
 import pyrealsense2 as rs
 import numpy as np
 import cv2
+import struct
 
 
 class RSCamera:
@@ -51,3 +52,48 @@ class RSCamera:
 
     def __del__(self):
         self.close()
+
+
+def display_images(color_image, depth_image):
+    # Apply colormap on depth image (image must be converted to 8-bit per pixel first)
+    depth_colormap = cv2.applyColorMap(cv2.convertScaleAbs(depth_image, alpha=0.03), cv2.COLORMAP_INFERNO)
+    depth_colormap_dim = depth_colormap.shape
+    color_colormap_dim = color_image.shape
+    # print(np.max(depth_image), np.min(depth_image))
+    # print(np.max(depth_colormap), np.min(depth_colormap))
+    # If depth and color resolutions are different, resize color image to match depth image for display
+    if depth_colormap_dim != color_colormap_dim:
+        resized_color_image = cv2.resize(color_image, dsize=(depth_colormap_dim[1], depth_colormap_dim[0]),
+                                         interpolation=cv2.INTER_AREA)
+        images = np.hstack((resized_color_image, depth_colormap))
+    else:
+        images = np.hstack((color_image, depth_colormap))
+
+    # Show images
+    cv2.namedWindow('RealSense', cv2.WINDOW_AUTOSIZE)
+    cv2.imshow('RealSense', images)
+    return cv2.waitKey(1)
+
+
+def save_images(depth_image, color_image, path):
+    """
+    Saves the depth and the color image
+
+    :param depth_image: depth image
+    :param color_image: color image
+    :param path: path to saved images
+    :return: True
+    """
+    color_image = cv2.cvtColor(color_image, cv2.COLOR_RGB2BGR)
+    depth_bytes = struct.pack("d" * 480 * 640, *depth_image.flatten().tolist())
+    with open(path + '.raw', 'wb') as file:
+        file.write(depth_bytes)
+    cv2.imwrite(path + '.png', color_image)
+    return True
+
+
+def read_depth(path):
+    depth_bytes = open(path, "rb").read()
+    depth = np.asarray(struct.unpack("d" * 480 * 640, depth_bytes))
+    depth = np.reshape(depth, (480, 640))
+    return depth

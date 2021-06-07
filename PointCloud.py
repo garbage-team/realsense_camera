@@ -102,9 +102,9 @@ class PointCloud:
         return volume
 
     def select_roi(self,
-                   shift=np.asarray([0, 0, -0.75]),
-                   rotation=np.asarray([0.23554, 0, 0]),
-                   borders=np.asarray([[np.inf, -np.inf], [np.inf, -np.inf], [1.1, 0.6]])):
+                   shift=np.asarray([0, 0, 0]),
+                   rotation=np.asarray([0, 0, 0]),
+                   borders=np.asarray([[np.inf, -np.inf], [np.inf, -np.inf], [np.inf, -np.inf]])):
         """
         Transforms and crops point cloud according to
         region of interest set
@@ -120,9 +120,20 @@ class PointCloud:
             self.crop(borders[i], axis=i)
         return self
 
-    def filter(self):
+    def filter(self, factor=0.02):
+        """
+        Filters out the majority of the points in the point cloud
+        and returns a subset of the points in the form of an nd-array
+        with shape (out_num_points, 3) where the second dimension are the
+        x, y, and z coordinates respectively. Used for plotting
+        responsive point clouds
+
+        :param factor: the factor of selected points according to
+        out_num_points = round(factor * self.num_points)
+        :return: points array of shape (out_num_points, 3)
+        """
         num_points = self.xyz.shape[0]
-        selected_points = round(num_points/50)
+        selected_points = round(num_points * factor)
         indices = np.random.choice(num_points,
                                    (selected_points,),
                                    replace=False)

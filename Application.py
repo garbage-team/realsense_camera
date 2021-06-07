@@ -66,8 +66,9 @@ class Application:
         :return: None
         """
         self.volume_sensor.measure_fill_rate()
-        self.plot_figure = plot_point_cloud(self.volume_sensor.point_cloud,
-                                            self.plot_figure)
+        if self.gui.get_pc_check():
+            self.plot_figure = plot_point_cloud(self.volume_sensor.point_cloud,
+                                                self.plot_figure)
         self.last_measurement = time()
 
     def calibrate_btn_callback(self):

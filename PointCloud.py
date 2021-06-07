@@ -4,14 +4,17 @@ from scipy.spatial import Delaunay
 
 
 class PointCloud:
-    def __init__(self, depth, fov=(69.4, 42.5)):
+    def __init__(self, points):
         """
         Takes a depth image array and calculates the points in xyz-space for all pixels
 
-        :param depth: a depth image array (float [h, w])
-        :param fov: the field of view angles in horizontal and vertical respectively (float, float)
+        :param points: the points of the point cloud in 3-space (num_points, 3)
         :return: an array of points in xyz-space (float [p, 3])
         """
+        self.xyz = points
+
+    @staticmethod
+    def from_depth(depth, fov=(69.4, 42.5)):
         x_size = depth.shape[1]
         y_size = depth.shape[0]
 
@@ -30,7 +33,7 @@ class PointCloud:
         z = np.expand_dims(z, -1)  # [h, w, 1]
         p = np.concatenate((x, y, z), axis=-1)   # [h, w, 3]
         p = np.reshape(p, (x_size * y_size, 3))  # [p, 3]
-        self.xyz = p
+        return PointCloud(p)
 
     def transform(self, rotation_matrix=np.eye(3), shift_matrix=np.asarray([0, 0, 0])):
         """
@@ -81,7 +84,10 @@ class PointCloud:
         """
         Calculates the volume of the points in xyz over the xy-plane.
 
+        Uses Delaunay triangulation for surface reconstruction
+
         Negative z-coordinates result in negative volumes
+        
         :return: The total volume of the point cloud in xyz-space (float)
         """
         # Extract the triangles in the xy-plane
@@ -137,4 +143,4 @@ class PointCloud:
         indices = np.random.choice(num_points,
                                    (selected_points,),
                                    replace=False)
-        return self.xyz[indices]
+        return PointCloud(self.xyz[indices])

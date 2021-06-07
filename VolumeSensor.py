@@ -20,9 +20,10 @@ class VolumeSensor:
 
     def measure_depth(self):
         self.rgb, self.depth = self.depth_camera.capture_images()
-        self.point_cloud = PointCloud(self.depth).select_roi(self.shift,
-                                                             self.rotation,
-                                                             self.borders)
+        self.point_cloud = PointCloud.from_depth(self.depth).\
+            select_roi(self.shift,
+                       self.rotation,
+                       self.borders)
         return self.point_cloud
 
     def measure_fill_rate(self):

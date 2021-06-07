@@ -2,7 +2,7 @@ from VolumeSensor import VolumeSensor
 from PalletGUI import PalletGUI
 from config import read_config, save_config
 import numpy as np
-from PointCloudPlotter import plot_point_cloud
+from PointCloudPlotter import plot_point_cloud, get_pc_image
 from time import time
 
 
@@ -35,6 +35,7 @@ class Application:
                              self.measure_btn_callback,
                              self.calibrate_btn_callback)
         self.plot_figure = None
+        self.pc_plot_img = None
         self.last_measurement = time()
         self.update_period = float(self.cfg["update_period"])
 
@@ -70,9 +71,7 @@ class Application:
         :return: None
         """
         self.volume_sensor.measure_fill_rate()
-        if self.gui.get_pc_check():
-            self.plot_figure = plot_point_cloud(self.volume_sensor.point_cloud,
-                                                self.plot_figure)
+        self.pc_plot_img = get_pc_image(self.volume_sensor.point_cloud)
         self.last_measurement = time()
 
     def calibrate_btn_callback(self):
@@ -92,7 +91,10 @@ class Application:
 
         :return: None
         """
-        self.gui.update_image(self.volume_sensor.rgb)
+        if self.gui.get_pc_check():
+            self.gui.update_image(self.pc_plot_img)
+        else:
+            self.gui.update_image(self.volume_sensor.rgb)
         fill_rate = self.volume_sensor.fill_rate * self.volume_sensor.max_articles
         self.gui.update_fill_rate(self.volume_sensor.fill_rate,
                                   round(fill_rate),

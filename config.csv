@@ -1,6 +1,6 @@
 config_file_path,config.csv
 volume_full,-0.06723457130109313
-volume_empty,-0.09883082458805918
+volume_empty,-0.09900340365878886
 max_num_articles,2
 update_period,60.0
 var_rot_x,-0.16515

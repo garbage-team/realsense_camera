@@ -21,14 +21,7 @@ class Application:
     """
     def __init__(self):
         self.cfg = read_config()
-        self.volume_sensor = VolumeSensor(
-            np.asarray([0, 0, 0.75]),
-            np.asarray([-0.16515, 0, 0]),
-            np.asarray([[0.6, -0.6],
-                        [0.6, -0.3],
-                        [.5, -.5]]),
-            self.cfg
-        )
+        self.volume_sensor = VolumeSensor(self.cfg)
         # Callback function declaration
         self.gui = PalletGUI(self.add_btn_callback,
                              self.rem_btn_callback,
@@ -37,7 +30,7 @@ class Application:
         self.plot_figure = None
         self.pc_plot_img = None
         self.last_measurement = time()
-        self.update_period = float(self.cfg["update_period"])
+        self.update_period = self.cfg["update_period"]
 
     def add_btn_callback(self):
         """

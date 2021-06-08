@@ -14,7 +14,7 @@ output from RSCamera().capture_images(), for convenience
 
 Images are saved and loaded with the same resolution of
 (640, 480). To change this, source code changes are
-necessary. 
+necessary.
 """
 
 import pyrealsense2 as rs

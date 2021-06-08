@@ -4,18 +4,27 @@ from PointCloud import PointCloud
 
 
 class VolumeSensor:
-    def __init__(self, shift, rotation, borders, cfg: dict):
-        self.volume_empty = float(cfg["volume_empty"])
-        self.volume_full = float(cfg["volume_full"])
+    def __init__(self, cfg: dict):
+        self.volume_empty = cfg["volume_empty"]
+        self.volume_full = cfg["volume_full"]
         self.depth_camera = RSCamera()
         self.rgb = None
         self.depth = None
         self.point_cloud = None
         self.fill_rate = None
-        self.max_articles = int(cfg["max_num_articles"])
-        self.shift = shift
-        self.rotation = rotation
-        self.borders = borders
+        self.max_articles = cfg["max_num_articles"]
+        self.rotation = np.asarray([cfg["var_rot_x"],
+                                    cfg["var_rot_y"],
+                                    cfg["var_rot_z"]])
+        self.shift = np.asarray([cfg["var_shift_x"],
+                                 cfg["var_shift_y"],
+                                 cfg["var_shift_z"]])
+        self.borders = np.asarray([[cfg["var_border_max_x"],
+                                    cfg["var_border_min_x"]],
+                                   [cfg["var_border_max_y"],
+                                    cfg["var_border_min_y"]],
+                                   [cfg["var_border_max_z"],
+                                    cfg["var_border_min_z"]]])
         # self.measure_fill_rate()
 
     def measure_depth(self):

@@ -16,7 +16,18 @@ def read_config(path="config.csv"):
         for line in file.readlines():
             line = line.strip()
             line = line.split(",")
-            cfg[line[0]] = line[1]
+            key = line[0]
+            if key.startswith("var_"):  # float variables
+                data = float(line[1])
+            elif key.startswith("volume_"):
+                data = float(line[1])
+            elif key == "update_period":
+                data = float(line[1])
+            elif key.startswith("max_num_"):
+                data = int(line[1])
+            else:
+                data = line[1]
+            cfg[key] = data
     return cfg
 
 

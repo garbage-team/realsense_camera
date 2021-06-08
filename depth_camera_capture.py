@@ -1,6 +1,15 @@
 """
 Module for taking images with the realsense camera for
 neural network training purposes
+
+To start capturing images, either run the entire module
+run the main function of the module:
+    depth_camera_capture.main()
+
+The script will save aligned depth images and rgb images
+to a folder where the module is run from. The depth images
+will be saved in a .raw format. To extract back the depths
+from the .raw files, check the RSCamera module.
 """
 
 import cv2

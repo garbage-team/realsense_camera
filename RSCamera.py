@@ -1,3 +1,22 @@
+"""
+Module for the RSCamera class definition as well as file
+operations for images taken by the RSCamera class
+
+Using the RSCamera to capture images gives a rgb and depth
+image array. To save the images, use the save_images
+function. To load the depth image from a file, use the
+read_depth function. To load the rgb image, use cv2.imread
+function.
+
+The images can be visualised using the display_images
+function. The input to this function is the same as the
+output from RSCamera().capture_images(), for convenience
+
+Images are saved and loaded with the same resolution of
+(640, 480). To change this, source code changes are
+necessary. 
+"""
+
 import pyrealsense2 as rs
 import numpy as np
 import cv2

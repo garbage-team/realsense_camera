@@ -5,6 +5,9 @@ import struct
 
 
 class RSCamera:
+    # Static property
+    maximum_depth = 4.
+
     def __init__(self):
         """
         An intel realsense camera object for creating aligned depth and rgb images
@@ -50,13 +53,28 @@ class RSCamera:
     def close(self):
         self.pipe.stop()
 
-    def __del__(self):
-        self.close()
-
 
 def display_images(color_image, depth_image):
+    """
+    Displays a depth image and a RGB image beside each other
+    in a window. The depth image is displayed through applying
+    a color map to the depths.
+
+    :param color_image: a RGB image in the cv2 standard
+    (height, width, channels) where the channels are ordered RGB
+    :param depth_image: a depth map that is similar to the color
+    image (height, width), as given by RSCamera().capture_images()
+    :return: the cv2 key-code that is pressed during the time
+    the window was shown
+    """
+    # Switch color image channels
+    color_image = cv2.cvtColor(color_image, cv2.COLOR_RGB2BGR)
+    # rescale depth image
+    depth_image = depth_image
     # Apply colormap on depth image (image must be converted to 8-bit per pixel first)
-    depth_colormap = cv2.applyColorMap(cv2.convertScaleAbs(depth_image, alpha=0.03), cv2.COLORMAP_INFERNO)
+    depth_colormap = cv2.applyColorMap(cv2.convertScaleAbs(depth_image,
+                                                           alpha=255/RSCamera.maximum_depth),
+                                       cv2.COLORMAP_INFERNO)
     depth_colormap_dim = depth_colormap.shape
     color_colormap_dim = color_image.shape
     # print(np.max(depth_image), np.min(depth_image))
@@ -72,7 +90,7 @@ def display_images(color_image, depth_image):
     # Show images
     cv2.namedWindow('RealSense', cv2.WINDOW_AUTOSIZE)
     cv2.imshow('RealSense', images)
-    return cv2.waitKey(1)
+    return cv2.waitKey(5)
 
 
 def save_images(depth_image, color_image, path):
